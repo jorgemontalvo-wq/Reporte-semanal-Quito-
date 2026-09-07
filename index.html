@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>F1-6.1-COM — Dashboard Ejecutivo Editable</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Source+Serif+4:ital@1&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --guinda:#A93B3C; --guinda-dark:#7E2C2D; --guinda-tint:#F6E9E9;
+    --white:#FFFFFF; --ink:#2B2426; --gray:#6B6467; --gray-line:#E4DEDD; --paper:#FBF9F8;
+    --green:#2E7D46; --green-bg:#E8F3EA; --yellow:#B8860B; --yellow-bg:#FBF1DD;
+    --red:#A93B3C; --red-bg:#F6E9E9; --gray-badge:#7A7477; --gray-badge-bg:#EFECEB;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Source Serif 4', Georgia, serif;background:var(--paper);color:var(--ink);}
+
+  .doc-header{background:var(--white);border-bottom:3px solid var(--guinda);}
+  .doc-header-inner{max-width:1160px;margin:0 auto;padding:22px 28px 16px;}
+  .brand-row{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .wordmark{font-size:26px;font-weight:700;color:var(--guinda);letter-spacing:.2px;}
+  .wordmark span{font-weight:400;color:var(--ink);font-size:15px;margin-left:10px;}
+  .iso-tag{font-size:12.5px;color:var(--gray);border:1px solid var(--gray-line);border-radius:3px;padding:3px 9px;white-space:nowrap;}
+  .doc-subtitle{margin-top:6px;font-size:17px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .doc-subtitle em{font-style:italic;color:var(--guinda-dark);}
+  .approval-chip{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:3px;}
+  .approval-chip.pendiente{background:var(--yellow-bg);color:var(--yellow);}
+  .approval-chip.aprobado{background:var(--green-bg);color:var(--green);}
+  .dochead{margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--gray-line);border:1px solid var(--gray-line);font-size:12.5px;}
+  .dochead div{background:var(--white);padding:7px 10px;}
+  .dochead b{display:block;color:var(--gray);font-weight:600;font-size:10.5px;margin-bottom:1px;}
+  @media (max-width:720px){.dochead{grid-template-columns:repeat(2,1fr);}}
+
+  .period-bar{max-width:1160px;margin:0 auto;padding:12px 28px;display:flex;flex-wrap:wrap;gap:16px 24px;align-items:center;border-bottom:1px solid var(--gray-line);background:var(--guinda-tint);}
+  .field{display:flex;flex-direction:column;font-size:11px;color:var(--guinda-dark);}
+  .field input,.field select{font-family:inherit;font-size:13.5px;color:var(--ink);border:1px solid var(--gray-line);border-radius:3px;padding:4px 7px;background:var(--white);margin-top:2px;min-width:110px;}
+  .field input:focus,.field select:focus{outline:2px solid var(--guinda);outline-offset:1px;}
+
+  .summary{max-width:1160px;margin:26px auto 0;padding:0 28px;display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+  @media (max-width:820px){.summary{grid-template-columns:repeat(2,1fr);}}
+  .sum-card{background:var(--white);border:1px solid var(--gray-line);border-top:3px solid var(--card-color,var(--guinda));padding:14px 16px;}
+  .sum-card .num{font-size:28px;font-weight:700;line-height:1;}
+  .sum-card .lbl{font-size:12px;color:var(--gray);margin-top:5px;}
+
+  .comparativo{max-width:1160px;margin:14px auto 0;padding:14px 28px;background:var(--white);border:1px solid var(--gray-line);}
+  .comparativo h3{font-size:13px;color:var(--gray);margin:0 0 10px;font-weight:600;}
+
+  .brief{max-width:1160px;margin:14px auto 0;padding:16px 28px;background:var(--white);border:1px solid var(--gray-line);border-left:4px solid var(--guinda);}
+  .brief h3{font-size:13px;color:var(--guinda-dark);margin:0 0 10px;font-weight:600;}
+  .brief h4{font-size:12px;color:var(--ink);margin:16px 0 6px;font-weight:600;}
+  .brief ul{margin:0;padding-left:18px;font-size:12.5px;line-height:1.75;}
+  .brief .empty{color:var(--gray);font-size:12px;margin:4px 0;}
+  .brief-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--gray-line);font-size:12.5px;}
+  .brief-row:last-child{border-bottom:none;}
+  table.comp{width:100%;border-collapse:collapse;font-size:13px;}
+  table.comp th{text-align:right;font-size:10.5px;color:var(--gray);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--gray-line);}
+  table.comp th:first-child{text-align:left;}
+  table.comp td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--gray-line);}
+  table.comp td:first-child{text-align:left;font-weight:600;}
+  .delta-up{color:var(--gray);} .delta-down{color:var(--gray);} .delta-zero{color:var(--gray);}
+
+  .toolbar{max-width:1160px;margin:16px auto 0;padding:0 28px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center;}
+  .btn{font-family:inherit;font-size:12.5px;border:1px solid var(--gray-line);background:var(--white);color:var(--ink);padding:7px 12px;border-radius:3px;cursor:pointer;}
+  .btn:hover{border-color:var(--guinda);color:var(--guinda-dark);}
+  .btn:disabled{opacity:.5;cursor:default;}
+  .btn.primary{background:var(--guinda);border-color:var(--guinda);color:var(--white);}
+  .btn.primary:hover{background:var(--guinda-dark);color:var(--white);}
+  #fileInput{display:none;}
+  .save-status{font-size:11.5px;color:var(--gray);align-self:center;margin-right:auto;min-height:1em;}
+
+  .tabs{max-width:1160px;margin:18px auto 0;padding:0 28px;display:flex;gap:6px;border-bottom:2px solid var(--gray-line);flex-wrap:wrap;}
+  .tab-btn{font-family:inherit;font-size:14.5px;background:none;border:none;padding:10px 16px;cursor:pointer;color:var(--gray);border-bottom:3px solid transparent;margin-bottom:-2px;}
+  .tab-btn:hover{color:var(--guinda-dark);}
+  .tab-btn.active{color:var(--guinda);font-weight:600;border-bottom:3px solid var(--guinda);}
+  .tab-btn small{display:block;font-size:11px;font-weight:400;color:var(--gray);}
+
+  .section{max-width:1160px;margin:0 auto;padding:22px 28px 8px;display:none;}
+  .section.active{display:block;}
+  .section-head{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
+  .section-head h2{font-size:19px;margin:0;}
+  .section-head .clause{font-size:12.5px;color:var(--gray);}
+
+  table.kpi{width:100%;border-collapse:collapse;margin-top:14px;font-size:13.5px;background:var(--white);}
+  table.kpi thead th{text-align:left;font-size:10.5px;color:var(--gray);font-weight:600;padding:8px 8px;border-bottom:2px solid var(--ink);}
+  table.kpi tbody tr{border-bottom:1px solid var(--gray-line);}
+  table.kpi td{padding:9px 8px;vertical-align:top;}
+  td.kpi-name{font-weight:600;width:22%;}
+  td.kpi-clause{font-size:10.5px;color:var(--gray);font-weight:400;margin-top:2px;}
+  td.tipo select{font-family:inherit;font-size:12px;border:1px solid var(--gray-line);border-radius:3px;padding:4px 5px;background:var(--white);color:var(--ink);width:100%;}
+  td.editable input{width:88px;font-family:inherit;font-size:13.5px;text-align:right;border:1px solid var(--gray-line);border-radius:3px;padding:5px 6px;background:var(--white);color:var(--ink);}
+  td.editable input:focus{outline:2px solid var(--guinda);outline-offset:1px;}
+  .bar-track{height:7px;background:var(--gray-line);border-radius:4px;overflow:hidden;margin-bottom:4px;width:120px;}
+  .bar-fill{height:100%;border-radius:4px;}
+  .pct-text{font-size:12px;font-variant-numeric:tabular-nums;}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:3px;white-space:nowrap;}
+  .badge.green{color:var(--green);background:var(--green-bg);}
+  .badge.yellow{color:var(--yellow);background:var(--yellow-bg);}
+  .badge.red{color:var(--red);background:var(--red-bg);}
+  .badge.gray{color:var(--gray-badge);background:var(--gray-badge-bg);}
+  td.nota input{width:100%;font-family:inherit;font-size:12px;border:1px solid var(--gray-line);border-radius:3px;padding:5px 6px;background:var(--white);color:var(--gray);}
+
+  .legend{max-width:1160px;margin:30px auto 0;padding:18px 28px;background:var(--white);border:1px solid var(--gray-line);}
+  .legend h3{font-size:13px;color:var(--gray);margin:0 0 12px;font-weight:600;}
+  .legend-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  @media (max-width:820px){.legend-grid{grid-template-columns:repeat(2,1fr);}}
+  .legend-item .badge{margin-bottom:6px;}
+  .legend-item p{font-size:12px;color:var(--gray);margin:0;line-height:1.5;}
+
+  .admin{max-width:1160px;margin:20px auto 0;padding:16px 28px;background:var(--guinda-tint);border:1px solid var(--gray-line);font-size:12px;color:var(--gray);}
+  .admin b{color:var(--guinda-dark);}
+
+  footer{max-width:1160px;margin:26px auto 0;padding:20px 28px 40px;font-size:11.5px;color:var(--gray);text-align:center;border-top:1px solid var(--gray-line);}
+
+  .approval-block{background:var(--white);border:1px solid var(--gray-line);padding:16px 18px;margin-top:14px;display:flex;gap:24px;flex-wrap:wrap;}
+  .approval-block .field{min-width:170px;}
+  .subhead{font-size:15px;font-weight:600;margin:26px 0 4px;color:var(--ink);}
+  .subhead .clause{font-size:11.5px;color:var(--gray);font-weight:400;margin-left:8px;}
+  table.actions{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;background:var(--white);}
+  table.actions th{text-align:left;font-size:10.5px;color:var(--gray);font-weight:600;padding:7px 8px;border-bottom:2px solid var(--ink);}
+  table.actions td{padding:7px 8px;border-bottom:1px solid var(--gray-line);vertical-align:top;}
+  table.actions input,table.actions select,table.actions textarea{width:100%;font-family:inherit;font-size:12.5px;border:1px solid var(--gray-line);border-radius:3px;padding:5px 6px;background:var(--white);color:var(--ink);}
+  table.actions textarea{resize:vertical;min-height:34px;}
+  .row-del{background:none;border:none;color:var(--gray);cursor:pointer;font-size:15px;}
+  .row-del:hover{color:var(--red);}
+  .add-row-btn{margin-top:8px;}
+  .mejora-item{display:flex;gap:8px;margin-top:8px;align-items:center;}
+  .mejora-item input{flex:1;font-family:inherit;font-size:13px;border:1px solid var(--gray-line);border-radius:3px;padding:7px 9px;background:var(--white);}
+  .mejora-item select{font-family:inherit;font-size:12px;border:1px solid var(--gray-line);border-radius:3px;padding:6px;background:var(--white);}
+  textarea.observaciones{width:100%;min-height:110px;margin-top:10px;font-family:inherit;font-size:13.5px;border:1px solid var(--gray-line);border-radius:3px;padding:10px 12px;background:var(--white);color:var(--ink);resize:vertical;}
+  .helper-note{font-size:11.5px;color:var(--gray);margin-top:6px;}
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <div class="doc-header-inner">
+    <div class="brand-row">
+      <div class="wordmark">TECKNOLOGISTIC S.A.<span>Área de Combustibles · Sistema de Gestión Integrado</span></div>
+      <div class="iso-tag">Certificado ISO 9001:2015</div>
+    </div>
+    <div class="doc-subtitle">
+      Dashboard Ejecutivo — <em>Informe Semanal Área Combustibles</em> (editable)
+      <span class="approval-chip" id="approvalChip"></span>
+    </div>
+    <div style="font-size:11.5px;color:var(--gray);margin-top:2px;">Contrato SHAYA Ecuador S.A. CW3363578 · Bloque 61 (SLB) · TNO / CETSO / SHIGAVITRANS</div>
+    <div class="dochead">
+      <div><b>Código</b>F1-6.1-COM</div>
+      <div><b>Versión</b>01</div>
+      <div><b>Fecha</b>05-2026</div>
+      <div><b>Clasificación</b>Uso exclusivo y confidencial</div>
+    </div>
+  </div>
+</div>
+
+<div class="period-bar">
+  <label class="field">Semana N.º<input type="text" id="f-semana" value="34"></label>
+  <label class="field">Período<input type="text" id="f-periodo" value="24 ago – 30 ago 2026" style="min-width:180px;"></label>
+  <label class="field">Revisado por<input type="text" id="f-revisado" value="Gerente de Combustibles" style="min-width:170px;"></label>
+</div>
+
+<div class="summary" id="summary"></div>
+<div class="comparativo" id="comparativo"></div>
+<div class="brief" id="brief"></div>
+
+<div class="toolbar">
+  <span class="save-status" id="saveStatus"></span>
+  <button class="btn" id="btnExport">⬇ Exportar respaldo</button>
+  <button class="btn" id="btnImport">⬆ Importar respaldo</button>
+  <input type="file" id="fileInput" accept="application/json">
+  <button class="btn" id="btnReset">↻ Iniciar nueva semana</button>
+  <button class="btn primary" id="btnPdf">📄 Generar informe PDF</button>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="combustibles">⛽ Combustibles<small>Anahí Díaz</small></button>
+  <button class="tab-btn" data-tab="mermas">🔍 Mermas y Desvío<small>Control antirrobo</small></button>
+  <button class="tab-btn" data-tab="qhse">🛡️ QHSE<small>Katheryne Mena</small></button>
+  <button class="tab-btn" data-tab="operaciones">🏗️ Operaciones<small>Alexander Crespo</small></button>
+  <button class="tab-btn" data-tab="aprobacion">✅ Aprobación y Seguimiento<small>Gerencia de Combustibles</small></button>
+</div>
+
+<div class="section active" id="sec-combustibles">
+  <div class="section-head"><h2>Combustibles — Anahí Díaz</h2><div class="clause">ISO 9001:2015 — Cláusula 9.1.1 / 8.5</div></div>
+  <table class="kpi"><thead><tr>
+    <th style="width:20%">KPI / Indicador</th><th>Tipo de meta</th><th>Valor semana</th><th>Meta</th><th>% Cumplimiento</th><th>Semáforo</th><th style="width:16%">Observación</th>
+  </tr></thead><tbody id="tbody-combustibles"></tbody></table>
+
+  <div class="subhead">Registro de Despachos W.O. <span class="clause">Trazabilidad por factura y pozo — contrato SHAYA CW3363578, Bloque 61</span></div>
+  <table class="actions">
+    <thead><tr>
+      <th style="width:14%">Fecha</th><th style="width:20%">N.º Factura</th><th style="width:20%">Cliente / Segmento</th><th style="width:16%">Pozo</th><th style="width:14%">Egreso (gal)</th><th style="width:11%">Obs. / NC</th><th style="width:5%"></th>
+    </tr></thead>
+    <tbody id="tbody-despachos"></tbody>
+  </table>
+  <button class="btn add-row-btn" id="btnAddDespacho">＋ Agregar despacho</button>
+  <div class="brief-row" style="margin-top:10px;"><span>Total registrado en despachos</span><b id="despachosTotal">—</b></div>
+  <div class="brief-row"><span>Reconciliación vs. KPI "Galones Entregados W.O." declarado</span><span class="badge" id="despachosRecon"></span></div>
+
+  <div class="subhead">Actividades Realizadas en la Semana <span class="clause">Anahí Díaz</span></div>
+  <textarea class="observaciones" id="act-combustibles" placeholder="Detalla aquí las actividades realizadas esta semana (despachos, coordinaciones, incidencias, etc.)"></textarea>
+</div>
+
+<div class="section" id="sec-mermas">
+  <div class="section-head"><h2>Control de Mermas y Desvío de Combustible</h2><div class="clause">Reconciliación Contador vs. Varillaje vs. Telemetría — control antirrobo/desvío</div></div>
+  <div class="helper-note" style="margin-bottom:10px;">
+    Compara la lectura del contador contra el varillaje físico y la telemetría por categoría de despacho. Una diferencia dentro de ±1% se considera tolerancia normal de medición; por encima de ±3% se trata como posible pérdida o desvío y exige acción correctiva (§10.2). Umbrales configurables en <code>CONFIG.metrologia</code>.
+  </div>
+  <table class="kpi">
+    <thead><tr>
+      <th style="width:12%">Categoría</th><th>N.º Despachos</th><th>Contador (gal)</th><th>Varillaje (gal)</th><th>Telemetría (gal)</th><th>% ERR Cont/Var</th><th>% ERR Cont/Tel</th><th>Semáforo</th><th style="width:14%">Acción / Observación</th>
+    </tr></thead>
+    <tbody id="tbody-mermas"></tbody>
+  </table>
+</div>
+
+<div class="section" id="sec-qhse">
+  <div class="section-head"><h2>QHSE — Katheryne Mena</h2><div class="clause">ISO 9001:2015 — Cláusula 9.1.1 / 7.2</div></div>
+  <table class="kpi"><thead><tr>
+    <th style="width:20%">KPI / Indicador</th><th>Tipo de meta</th><th>Valor semana</th><th>Meta</th><th>% Cumplimiento</th><th>Semáforo</th><th style="width:16%">Observación</th>
+  </tr></thead><tbody id="tbody-qhse"></tbody></table>
+  <div class="subhead">Actividades Realizadas en la Semana <span class="clause">Katheryne Mena</span></div>
+  <textarea class="observaciones" id="act-qhse" placeholder="Detalla aquí las actividades realizadas esta semana (auditorías, simulacros, documentación, capacitaciones, etc.)"></textarea>
+
+  <div class="subhead">Revisión de SGI e ISO 9001 <span class="clause">ISO §9.1.1 / §9.3 — Seguimiento a la implementación</span></div>
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:8px;">
+    <label class="field">% de Avance ISO 9001<input type="number" id="sgi-avance" min="0" max="100" step="0.1" style="max-width:110px;"></label>
+    <div style="flex:1;min-width:220px;">
+      <div class="bar-track" style="width:100%;"><div class="bar-fill" id="sgi-bar-fill" style="width:0%;"></div></div>
+      <span class="badge" id="sgi-badge" style="margin-top:6px;display:inline-flex;"></span>
+    </div>
+  </div>
+  <textarea class="observaciones" id="sgi-nota" placeholder="Observaciones sobre la revisión de SGI / ISO 9001 (hallazgos, brechas, plan de cierre)..." style="margin-top:10px;"></textarea>
+</div>
+
+<div class="section" id="sec-operaciones">
+  <div class="section-head"><h2>Operaciones — Alexander Crespo</h2><div class="clause">ISO 9001:2015 — Cláusula 9.1.1 / 8.1</div></div>
+  <table class="kpi"><thead><tr>
+    <th style="width:20%">KPI / Indicador</th><th>Tipo de meta</th><th>Valor semana</th><th>Meta</th><th>% Cumplimiento</th><th>Semáforo</th><th style="width:16%">Observación</th>
+  </tr></thead><tbody id="tbody-operaciones"></tbody></table>
+  <div class="subhead">Actividades Realizadas en la Semana <span class="clause">Alexander Crespo</span></div>
+  <textarea class="observaciones" id="act-operaciones" placeholder="Detalla aquí las actividades realizadas esta semana (inspecciones, proyectos, coordinaciones de campo, etc.)"></textarea>
+</div>
+
+<div class="section" id="sec-aprobacion">
+  <div class="section-head"><h2>Aprobación y Seguimiento — Gerencia de Combustibles</h2><div class="clause">ISO 9001:2015 — § 9.3 Revisión por la Dirección / § 10.2 No Conformidad y Acción Correctiva / § 10.3 Mejora Continua</div></div>
+
+  <div class="approval-block">
+    <label class="field">Estado del informe
+      <select id="rv-estado">
+        <option value="Pendiente">Pendiente de aprobación</option>
+        <option value="Aprobado">Aprobado en reunión semanal</option>
+      </select>
+    </label>
+    <label class="field">Fecha de aprobación<input type="date" id="rv-fecha"></label>
+    <label class="field">Aprobado por<input type="text" id="rv-aprobadopor" style="min-width:200px;"></label>
+  </div>
+
+  <div class="subhead">Acciones Correctivas y Seguimiento <span class="clause">§10.2 — las que no estén "Cerrada" pasan automáticamente a la semana siguiente</span></div>
+  <button class="btn" id="btnSugerirAcciones">＋ Sugerir filas desde KPI 🔴/🟡 actuales</button>
+  <table class="actions">
+    <thead><tr>
+      <th style="width:22%">Hallazgo / KPI</th><th style="width:26%">Acción Correctiva</th><th style="width:14%">Responsable</th><th style="width:12%">Fecha Compromiso</th><th style="width:14%">Estado</th><th style="width:5%"></th>
+    </tr></thead>
+    <tbody id="tbody-acciones"></tbody>
+  </table>
+  <button class="btn add-row-btn" id="btnAddAccion">＋ Agregar fila</button>
+
+  <div class="subhead">Mejora Continua <span class="clause">§10.3 — igualmente se traslada si no está "Cerrada"</span></div>
+  <div id="mejoras-list"></div>
+  <button class="btn add-row-btn" id="btnAddMejora">＋ Agregar punto</button>
+
+  <div class="subhead">Observaciones de la Gerencia de Combustibles</div>
+  <textarea class="observaciones" id="rv-observaciones" placeholder="Comentarios, decisiones y contexto adicional del Gerente de Combustibles para esta semana..."></textarea>
+  <div class="helper-note">Este apartado, junto con las acciones y la mejora continua, se incluye en el informe PDF para Gerencia General.</div>
+</div>
+
+<div class="legend">
+  <h3>Leyenda de semáforos ISO 9001:2015 — Criterios de conformidad</h3>
+  <div class="legend-grid">
+    <div class="legend-item"><span class="badge green">🟢 CONFORME — ISO OK</span><p>Cumplimiento ≥ 100% de la meta (o, en metas tipo "máximo permitido", valor dentro del límite). No requiere acción.</p></div>
+    <div class="legend-item"><span class="badge yellow">🟡 EN RIESGO — Atención</span><p>Cumplimiento entre 80% y 99%. Revisar causas. Posible acción preventiva ISO §6.1.</p></div>
+    <div class="legend-item"><span class="badge red">🔴 NO CONFORME — NC §10.2</span><p>Cumplimiento &lt; 80%. Registrar en hoja 🔴 No Conformidades. Acción correctiva requerida.</p></div>
+    <div class="legend-item"><span class="badge gray">⚪ Sin meta numérica</span><p>Indicador de referencia o meta en 0. Monitorear tendencia (ISO §10.3).</p></div>
+  </div>
+</div>
+
+<div class="admin">
+  <b>Cómo funciona la semana:</b> este archivo no se ejecuta solo — no hay forma de que un HTML "se abra y genere el PDF" automáticamente cada lunes sin un servidor o un disparador externo (por ejemplo un script programado). Lo que sí hace por ti con un clic en <b>"Iniciar nueva semana"</b>: archiva el resumen de esta semana para la comparación, traslada las acciones y mejoras que no estén "Cerrada" con su semáforo de estado, limpia las lecturas de mermas y el registro de despachos, avanza el número de semana, y deja el estado de aprobación en "Pendiente" otra vez. Luego generas el PDF cuando quieras con <b>"Generar informe PDF"</b>.
+  <br><br>
+  <b>Alcance de este informe:</b> este documento cubre cumplimiento de KPI, control de mermas/desvío por reconciliación de medición, HSE/ISO 9001 y aprobación gerencial. El control de flota (autorización de conductores y tanqueros, vigencia de documentos) vive en <b>F6-OP-5.2 — Centro de Control Operativo</b>, y la reconciliación de despachos por geocerca vive en <b>Auditoría a Geocercas</b>; este dashboard no los reemplaza, pero puede citarlos como fuente cuando una acción correctiva lo requiera.
+</div>
+
+<footer>
+  Código: TCK-ADM-1.2 · F1-6.1-COM · Versión 01 · ISO 9001:2015 · Elaborado: K. Mena · Revisado: J. Montalvo · Aprobado: M. Paliz · TECKNOLOGISTIC S.A. — Prohibida su reproducción sin autorización.
+</footer>
+
+<script>
+const STORAGE_KEY = 'f1-6-1-com-dashboard-v4';
+
+// ---- Umbrales de control centralizados (ajustables por un solo lugar) ----
+const CONFIG = {
+  cumplimiento: { verde: 100, amarillo: 80 },              // % cumplimiento de meta (KPI)
+  iso: { verde: 90, amarillo: 70 },                         // % avance SGI / ISO 9001
+  metrologia: { verdeMax: 1, amarilloMax: 3 }               // % error Contador vs Varillaje/Telemetría (control de mermas/desvío)
+};
+
+const DEFAULT_STATE = {
+  semana:"34", periodo:"24 ago – 30 ago 2026", revisado:"Gerente de Combustibles",
+  combustibles: [
+    {kpi:"Galones Entregados W.O. (gal)", clause:"ISO §8.5.1", tipo:"min", meta:7000, valor:5154.7, nota:""},
+    {kpi:"Galones Despacho Livianos (gal)", clause:"ISO §8.5.1", tipo:"min", meta:712.4, valor:636.2, nota:""},
+    {kpi:"Stock Tanquero (gal)", clause:"ISO §8.5", tipo:"none", meta:null, valor:2040.7, nota:"Galones restantes en tanquero tras entrega W.O. + Livianos — ingresar manualmente"},
+    {kpi:"Total Galones Entregados Semana (gal)", clause:"ISO §9.1.1", tipo:"min", meta:7712.4, valor:5790.9, nota:""},
+    {kpi:"N° Viajes Operativos", clause:"ISO §8.1", tipo:"min", meta:3, valor:2, nota:""},
+    {kpi:"Trasvases / Stand by", clause:"ISO §8.5", tipo:"none", meta:null, valor:1, nota:""},
+    {kpi:"Galones Entregados RIG", clause:"ISO §8.5", tipo:"min", meta:20000, valor:9813, nota:""}
+  ],
+  qhse: [
+    {kpi:"Documentos SGI Actualizados", clause:"ISO §7.5", tipo:"min", meta:5, valor:5, nota:""},
+    {kpi:"Simulacros Realizados", clause:"ISO §8.1", tipo:"min", meta:2, valor:2, nota:"Al día — simulacros trimestrales Q2"},
+    {kpi:"Reporte RIR y OI", clause:"ISO §8.1", tipo:"min", meta:16, valor:29, nota:"Actualizado hasta el 17 de agosto"},
+    {kpi:"Pendientes Próxima Semana — Alta Prioridad", clause:"ISO §6.2", tipo:"min", meta:5, valor:0, nota:""}
+  ],
+  operaciones: [
+    {kpi:"Inspecciones de Campo Realizadas", clause:"ISO §8.1", tipo:"min", meta:7, valor:7, nota:""},
+    {kpi:"Despachos Livianos Registrados", clause:"ISO §9.1.1", tipo:"min", meta:73, valor:73, nota:""},
+    {kpi:"Despachos Workover Registrados", clause:"ISO §9.1.1", tipo:"min", meta:4, valor:4, nota:""},
+    {kpi:"Proyectos Completados en la Semana", clause:"ISO §8.1", tipo:"min", meta:2, valor:2, nota:""},
+    {kpi:"Pendientes Semana Siguiente", clause:"ISO §6.2", tipo:"max", meta:0, valor:-8, nota:""}
+  ],
+  // Control de mermas y desvío de combustible — reconciliación Contador vs Varillaje vs Telemetría
+  mermas: [
+    {categoria:"Livianos", despachos:73, contador:662.7, varillaje:691.8, telemetria:676.2, accion:"", obs:""},
+    {categoria:"Workover", despachos:4, contador:null, varillaje:5233.6, telemetria:5310, accion:"", obs:""},
+    {categoria:"Rig", despachos:1, contador:9813, varillaje:9997.4, telemetria:9873.7, accion:"", obs:""},
+    {categoria:"Stock (C-01)", despachos:0, contador:0, varillaje:2097, telemetria:2143.7, accion:"", obs:""},
+    {categoria:"Stock (ST-03)", despachos:1, contador:null, varillaje:6098.1, telemetria:6146.4, accion:"", obs:""},
+    {categoria:"Trasvase", despachos:1, contador:0, varillaje:2274.6, telemetria:0, accion:"", obs:"Estuvo en Stand by hasta el 29 de agosto"}
+  ],
+  // Registro de despachos W.O. — trazabilidad administrativa por factura y pozo (contrato SHAYA CW3363578, Bloque 61)
+  despachosWO: [
+    {fecha:"2026-08-26", factura:"001-051-001933656", cliente:"SINOPEC 976", pozo:"ACAJ-202", egreso:1540.7, obs:""},
+    {fecha:"2026-08-26", factura:"001-051-001929340", cliente:"TUSCANY 111", pozo:"ACAP-100", egreso:2045, obs:""},
+    {fecha:"2026-08-27", factura:"001-051-001935364", cliente:"SINOPEC 976", pozo:"ACAJ-202", egreso:400, obs:""},
+    {fecha:"2026-08-28", factura:"001-051-001933656", cliente:"MAVERICK 401", pozo:"ACAL-256H", egreso:9813, obs:""},
+    {fecha:"2026-08-30", factura:"001-051-001933656", cliente:"SINOPEC 933", pozo:"ACSB-033", egreso:1169, obs:""}
+  ],
+  revision:{ estado:"Pendiente", fecha:"", aprobadoPor:"Gerente de Combustibles" },
+  acciones: [],
+  mejoras: [],
+  observacionesGerencia: "",
+  historial: [],
+  activities: { combustibles:"", qhse:"", operaciones:"" },
+  sgiRevision: { avance: 0, nota: "" }
+};
+
+let state = null;
+const SECTIONS = ['combustibles','qhse','operaciones'];
+const SECTION_LABELS = {combustibles:'Combustibles — Anahí Díaz', qhse:'QHSE — Katheryne Mena', operaciones:'Operaciones — Alexander Crespo'};
+
+function calc(row){
+  if(row.tipo === 'none' || row.meta === null || row.meta === '' || row.meta === undefined || isNaN(row.meta)){
+    return {pct:null, semaforo:'gray', label:'⚪ Sin Meta Numérica'};
+  }
+  const meta = Number(row.meta), valor = Number(row.valor)||0;
+  if(row.tipo === 'min'){
+    if(meta <= 0) return {pct:null, semaforo:'gray', label:'⚪ Sin Meta Numérica'};
+    const pct = valor/meta*100;
+    if(pct >= CONFIG.cumplimiento.verde) return {pct, semaforo:'green', label:'🟢 CONFORME — ISO OK'};
+    if(pct >= CONFIG.cumplimiento.amarillo) return {pct, semaforo:'yellow', label:'🟡 EN RIESGO — Atención'};
+    return {pct, semaforo:'red', label:'🔴 NO CONFORME — NC §10.2'};
+  }
+  if(meta === 0){
+    if(valor <= 0) return {pct:null, semaforo:'green', label:'🟢 CONFORME — ISO OK'};
+    return {pct:null, semaforo:'yellow', label:'🟡 ATENCIÓN — Revisar'};
+  }
+  const pct = valor/meta*100;
+  if(valor <= meta) return {pct, semaforo:'green', label:'🟢 CONFORME — ISO OK'};
+  if(valor <= meta*1.2) return {pct, semaforo:'yellow', label:'🟡 EN RIESGO — Atención'};
+  return {pct, semaforo:'red', label:'🔴 NO CONFORME — NC §10.2'};
+}
+
+function calcSGI(avance){
+  const a = Number(avance)||0;
+  if(a>=CONFIG.iso.verde) return {semaforo:'green', label:'CONFORME — Avance Óptimo'};
+  if(a>=CONFIG.iso.amarillo) return {semaforo:'yellow', label:'EN PROGRESO — Atención'};
+  return {semaforo:'red', label:'REZAGADO — Acción Requerida'};
+}
+
+// ---- Control de mermas y desvío: reconciliación Contador vs Varillaje/Telemetría ----
+function calcMerma(row){
+  const desp = Number(row.despachos)||0;
+  const cont = (row.contador===null || row.contador===''|| row.contador===undefined) ? null : Number(row.contador);
+  const var_ = (row.varillaje===null || row.varillaje==='' || row.varillaje===undefined) ? null : Number(row.varillaje);
+  const tel = (row.telemetria===null || row.telemetria===''|| row.telemetria===undefined) ? null : Number(row.telemetria);
+
+  if(cont===null){
+    if(desp>0) return {errVar:null, errTel:null, semaforo:'red', label:'🔴 NC — Sin lectura de contador', accionSugerida:'Registrar lectura de contador para validar despachos.'};
+    return {errVar:null, errTel:null, semaforo:'gray', label:'⚪ Sin despachos en el período', accionSugerida:''};
+  }
+  const errVar = (var_ && var_!==0) ? (cont-var_)/var_*100 : null;
+  const errTel = (tel && tel!==0) ? (cont-tel)/tel*100 : null;
+  const errs = [errVar, errTel].filter(e=>e!==null).map(Math.abs);
+  if(!errs.length) return {errVar, errTel, semaforo:'gray', label:'⚪ Sin varillaje/telemetría para comparar', accionSugerida:'Registrar varillaje o telemetría del período.'};
+  const maxErr = Math.max(...errs);
+  if(maxErr <= CONFIG.metrologia.verdeMax) return {errVar, errTel, semaforo:'green', label:'🟢 CONFORME — Dentro de tolerancia', accionSugerida:''};
+  if(maxErr <= CONFIG.metrologia.amarilloMax) return {errVar, errTel, semaforo:'yellow', label:'🟡 REVISAR — Variación moderada', accionSugerida:'Verificar calibración de varillaje/telemetría.'};
+  return {errVar, errTel, semaforo:'red', label:'🔴 NC — Posible desvío o pérdida', accionSugerida:'Investigar diferencia contra vale físico de despacho. Acción correctiva obligatoria (§10.2).'};
+}
+
+function statusColor(estado){ return estado==='Cerrada' ? 'green' : estado==='En proceso' ? 'yellow' : 'red'; }
+function statusLabel(estado){ return estado==='Cerrada' ? '🟢 Cerrada' : estado==='En proceso' ? '🟡 En proceso' : '🔴 Abierta'; }
+
+function loadState(){
+  return new Promise(async (resolve)=>{
+    try{
+      const res = await window.storage.get(STORAGE_KEY, false);
+      if(res && res.value){
+        const parsed = JSON.parse(res.value);
+        parsed.revision = parsed.revision || JSON.parse(JSON.stringify(DEFAULT_STATE.revision));
+        parsed.acciones = parsed.acciones || [];
+        parsed.mejoras = parsed.mejoras || [];
+        parsed.observacionesGerencia = parsed.observacionesGerencia || "";
+        parsed.historial = parsed.historial || [];
+        parsed.activities = parsed.activities || { combustibles:"", qhse:"", operaciones:"" };
+        parsed.sgiRevision = parsed.sgiRevision || { avance: 0, nota: "" };
+        parsed.mermas = parsed.mermas || JSON.parse(JSON.stringify(DEFAULT_STATE.mermas));
+        parsed.despachosWO = parsed.despachosWO || [];
+        resolve(parsed); return;
+      }
+    }catch(e){ /* no saved state yet */ }
+    resolve(JSON.parse(JSON.stringify(DEFAULT_STATE)));
+  });
+}
+
+async function saveState(){
+  const statusEl = document.getElementById('saveStatus');
+  try{
+    const res = await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
+    statusEl.textContent = res ? 'Guardado ✓' : '';
+    setTimeout(()=>{ if(statusEl.textContent==='Guardado ✓') statusEl.textContent=''; }, 1500);
+  }catch(e){
+    statusEl.textContent = 'No se pudo guardar automáticamente en este dispositivo.';
+  }
+}
+
+function renderHeaderFields(){
+  document.getElementById('f-semana').value = state.semana;
+  document.getElementById('f-periodo').value = state.periodo;
+  document.getElementById('f-revisado').value = state.revisado;
+  document.getElementById('rv-estado').value = state.revision.estado;
+  document.getElementById('rv-fecha').value = state.revision.fecha;
+  document.getElementById('rv-aprobadopor').value = state.revision.aprobadoPor;
+  document.getElementById('rv-observaciones').value = state.observacionesGerencia;
+  const chip = document.getElementById('approvalChip');
+  if(state.revision.estado === 'Aprobado'){
+    chip.className = 'approval-chip aprobado';
+    chip.textContent = '✔ Aprobado' + (state.revision.fecha ? ' — '+state.revision.fecha : '') + (state.revision.aprobadoPor ? ' · '+state.revision.aprobadoPor : '');
+  } else {
+    chip.className = 'approval-chip pendiente';
+    chip.textContent = '⏳ Pendiente de aprobación';
+  }
+}
+
+function getCounts(){
+  let green=0, yellow=0, red=0, gray=0, total=0, pctSum=0, pctCount=0;
+  SECTIONS.forEach(sec=>{
+    state[sec].forEach(row=>{
+      total++;
+      const c = calc(row);
+      if(c.semaforo==='green') green++;
+      else if(c.semaforo==='yellow') yellow++;
+      else if(c.semaforo==='red') red++;
+      else gray++;
+      if(c.pct!==null){ pctSum+=c.pct; pctCount++; }
+    });
+  });
+  return {green,yellow,red,gray,total, avgPct: pctCount ? pctSum/pctCount : null};
+}
+
+function renderSummary(){
+  const {green,yellow,red,gray,total} = getCounts();
+  document.getElementById('summary').innerHTML = `
+    <div class="sum-card" style="--card-color:var(--ink)"><div class="num">${total}</div><div class="lbl">Indicadores evaluados</div></div>
+    <div class="sum-card" style="--card-color:var(--green)"><div class="num" style="color:var(--green)">${green}</div><div class="lbl">🟢 Conformes — ISO OK</div></div>
+    <div class="sum-card" style="--card-color:var(--yellow)"><div class="num" style="color:var(--yellow)">${yellow}</div><div class="lbl">🟡 En riesgo — atención</div></div>
+    <div class="sum-card" style="--card-color:var(--red)"><div class="num" style="color:var(--red)">${red}</div><div class="lbl">🔴 No conformes — NC §10.2</div></div>
+    <div class="sum-card" style="--card-color:var(--gray-badge)"><div class="num" style="color:var(--gray-badge)">${gray}</div><div class="lbl">⚪ Sin meta numérica</div></div>
+  `;
+}
+
+function deltaHtml(curr, prev, suffix){
+  suffix = suffix || '';
+  const d = Math.round((curr-prev)*10)/10;
+  if(d > 0) return `<span class="delta-up">▲ ${d}${suffix}</span>`;
+  if(d < 0) return `<span class="delta-down">▼ ${Math.abs(d)}${suffix}</span>`;
+  return `<span class="delta-zero">— 0${suffix}</span>`;
+}
+
+function renderComparativo(){
+  const el = document.getElementById('comparativo');
+  const cur = getCounts();
+  if(!state.historial.length){
+    el.innerHTML = `<h3>Comparativo Semanal</h3><p class="helper-note" style="margin:0;">Aún no hay una semana anterior archivada. Se genera automáticamente cada vez que uses "Iniciar nueva semana".</p>`;
+    return;
+  }
+  const last = state.historial[state.historial.length-1];
+  el.innerHTML = `<h3>Comparativo Semanal — Semana ${last.semana} vs. Semana ${state.semana}</h3>
+    <table class="comp">
+      <thead><tr><th>Categoría</th><th>Sem. ${last.semana}</th><th>Sem. ${state.semana}</th><th>Variación</th></tr></thead>
+      <tbody>
+        <tr><td>🟢 Conformes</td><td>${last.counts.green}</td><td>${cur.green}</td><td>${deltaHtml(cur.green,last.counts.green)}</td></tr>
+        <tr><td>🟡 En riesgo</td><td>${last.counts.yellow}</td><td>${cur.yellow}</td><td>${deltaHtml(cur.yellow,last.counts.yellow)}</td></tr>
+        <tr><td>🔴 No conformes</td><td>${last.counts.red}</td><td>${cur.red}</td><td>${deltaHtml(cur.red,last.counts.red)}</td></tr>
+        <tr><td>⚪ Sin meta</td><td>${last.counts.gray}</td><td>${cur.gray}</td><td>${deltaHtml(cur.gray,last.counts.gray)}</td></tr>
+        <tr><td>Cumplimiento promedio</td><td>${last.counts.avgPct!==null?last.counts.avgPct.toFixed(1)+'%':'—'}</td><td>${cur.avgPct!==null?cur.avgPct.toFixed(1)+'%':'—'}</td><td>${(last.counts.avgPct!==null && cur.avgPct!==null)?deltaHtml(cur.avgPct,last.counts.avgPct,' pts'):'—'}</td></tr>
+      </tbody>
+    </table>`;
+}
+
+function renderBrief(){
+  const el = document.getElementById('brief');
+  if(!state.historial.length){
+    el.innerHTML = `<h3>🧭 Brief de Inicio de Semana</h3><p class="empty">Se genera automáticamente al usar "Iniciar nueva semana": trae la continuidad operativa y el resumen de auditoría HSE de la semana que se está cerrando.</p>`;
+    return;
+  }
+  const last = state.historial[state.historial.length-1];
+  const kpis = last.kpis || {combustibles:[],qhse:[],operaciones:[]};
+  const responsables = {combustibles:'Anahí Díaz', qhse:'Katheryne Mena', operaciones:'Alexander Crespo'};
+
+  const stockRow = (kpis.combustibles||[]).find(r=>r.kpi && r.kpi.indexOf('Stock Tanquero')>=0);
+  const stockTxt = stockRow ? `${stockRow.valor} gal` : '—';
+
+  const ncItems = [];
+  SECTIONS.forEach(sec=>{
+    (kpis[sec]||[]).forEach(row=>{
+      const c = calc(row);
+      if(c.semaforo==='red'){
+        ncItems.push(`<li><b>${row.kpi}</b> (${responsables[sec]}) — ${c.pct!==null?c.pct.toFixed(1)+'%':'no conforme'} de la meta</li>`);
+      }
+    });
+  });
+
+  const todayStr = new Date().toISOString().slice(0,10);
+  const accionesHtml = state.acciones.length ? state.acciones.map(a=>{
+    let estadoVisual, colorClass;
+    if(a.fecha && a.fecha < todayStr && a.estado!=='Cerrada'){ estadoVisual='🔴 VENCIDA'; colorClass='red'; }
+    else if(a.estado==='En proceso'){ estadoVisual='🟡 En proceso'; colorClass='yellow'; }
+    else { estadoVisual='⚪ Abierta (sin vencer)'; colorClass='gray'; }
+    return `<li><b>${a.hallazgo||'(sin hallazgo)'}</b> — ${a.responsable||'sin responsable asignado'} · compromiso: ${a.fecha||'sin fecha'} <span class="badge ${colorClass}" style="margin-left:6px;">${estadoVisual}</span></li>`;
+  }).join('') : `<li class="empty" style="list-style:none;">Sin acciones correctivas abiertas trasladadas.</li>`;
+
+  const sgiPrev = last.sgiRevision ? (Number(last.sgiRevision.avance)||0) : null;
+  const sgiColor = sgiPrev===null?'gray': sgiPrev>=90?'green':sgiPrev>=70?'yellow':'red';
+  const approvedLast = last.revision && last.revision.estado==='Aprobado';
+
+  const asks = [];
+  SECTIONS.forEach(sec=>{
+    (kpis[sec]||[]).forEach(row=>{
+      const c = calc(row);
+      if(c.semaforo==='red'){
+        asks.push(`Solicitar a <b>${responsables[sec]}</b> sustento y plan de acción para <b>"${row.kpi}"</b> (cerró en ${c.pct!==null?c.pct.toFixed(1)+'%':'no conforme'}).`);
+      }
+    });
+  });
+  if(sgiPrev!==null && sgiPrev<90){
+    asks.push(`Solicitar a <b>Katheryne Mena</b> evidencia objetiva del avance real de ISO 9001 (cerró en ${sgiPrev}%) y las brechas pendientes de cierre.`);
+  }
+  if(!approvedLast){
+    asks.push(`El informe de la semana ${last.semana} quedó sin aprobar — confirmar con Gerencia General antes de dar por cerrada esa semana (ISO §9.3).`);
+  }
+  state.acciones.forEach(a=>{
+    if(a.fecha && a.fecha < todayStr && a.estado!=='Cerrada'){
+      asks.push(`Dar seguimiento con <b>${a.responsable||'el responsable asignado'}</b> sobre la acción vencida: <b>"${a.hallazgo}"</b> (compromiso: ${a.fecha}).`);
+    }
+  });
+
+  el.innerHTML = `
+    <h3>🧭 Brief de Inicio de Semana — Continuidad Operativa y Auditoría HSE (vs. Semana ${last.semana})</h3>
+
+    <h4>⛽ Continuidad operativa — control de combustible y logística</h4>
+    <div class="brief-row"><span>Stock Tanquero de cierre (semana ${last.semana})</span><b>${stockTxt}</b></div>
+    ${ncItems.length ? `<p style="font-size:12px;margin:10px 0 4px;">Indicadores que cerraron <b>NO CONFORME</b>:</p><ul>${ncItems.join('')}</ul>` : `<p class="empty">Ningún indicador operativo cerró no conforme la semana pasada.</p>`}
+
+    <h4>🛡️ Auditoría HSE / ISO 9001</h4>
+    <div class="brief-row"><span>% Avance ISO 9001 (semana ${last.semana})</span><span class="badge ${sgiColor}">${sgiPrev!==null?sgiPrev+'%':'—'}</span></div>
+    <div class="brief-row"><span>Aprobación del informe anterior</span><span class="badge ${approvedLast?'green':'yellow'}">${approvedLast?'✔ Aprobado':'⏳ Pendiente'}</span></div>
+    <p style="font-size:12px;margin:10px 0 4px;">Acciones correctivas y mejoras trasladadas a esta semana:</p>
+    <ul>${accionesHtml}</ul>
+
+    <h4>📋 Solicitudes sugeridas para esta semana</h4>
+    ${asks.length ? `<ul>${asks.map(a=>`<li>${a}</li>`).join('')}</ul>` : `<p class="empty">Sin solicitudes específicas — la semana anterior cerró limpia.</p>`}
+  `;
+}
+
+function fmt(n){ if(n===null || n===undefined || n==='') return ''; return n; }
+
+function renderSection(sec){
+  const tbody = document.getElementById('tbody-'+sec);
+  tbody.innerHTML = '';
+  state[sec].forEach((row)=>{
+    const c = calc(row);
+    const tr = document.createElement('tr');
+    const pctBar = c.pct===null ? '' : `<div class="bar-track"><div class="bar-fill" style="width:${Math.min(Math.max(c.pct,0),100)}%;background:var(--${c.semaforo==='gray'?'gray-badge':c.semaforo})"></div></div>`;
+    const pctText = c.pct===null ? '—' : c.pct.toFixed(1).replace('.',',')+'%';
+    tr.innerHTML = `
+      <td class="kpi-name">${row.kpi}<div class="kpi-clause">${row.clause}</div></td>
+      <td class="tipo">
+        <select data-field="tipo">
+          <option value="min" ${row.tipo==='min'?'selected':''}>Mínimo a alcanzar</option>
+          <option value="max" ${row.tipo==='max'?'selected':''}>Máximo permitido</option>
+          <option value="none" ${row.tipo==='none'?'selected':''}>Sin meta numérica</option>
+        </select>
+      </td>
+      <td class="editable"><input type="number" step="any" data-field="valor" value="${fmt(row.valor)}"></td>
+      <td class="editable"><input type="number" step="any" data-field="meta" value="${fmt(row.meta)}" ${row.tipo==='none'?'disabled':''}></td>
+      <td>${pctBar}<span class="pct-text">${pctText}</span></td>
+      <td><span class="badge ${c.semaforo}">${c.label}</span></td>
+      <td class="nota"><input type="text" data-field="nota" value="${row.nota ? row.nota.replace(/"/g,'&quot;') : ''}" placeholder="Observación..."></td>
+    `;
+    tr.querySelectorAll('[data-field]').forEach(el=>{
+      const evt = el.tagName==='SELECT' ? 'change' : 'input';
+      el.addEventListener(evt, ()=>{
+        const field = el.dataset.field;
+        if(field==='meta' || field==='valor'){
+          row[field] = el.value===''? null : Number(el.value);
+        } else { row[field] = el.value; }
+        if(field==='tipo'){ renderSection(sec); }
+        else { renderRowComputed(tr, row); }
+        renderSummary();
+        renderComparativo();
+        if(sec==='combustibles' && typeof renderDespachosTotales==='function') renderDespachosTotales();
+        saveState();
+      });
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function renderRowComputed(tr, row){
+  const c = calc(row);
+  const barCell = tr.children[4];
+  const badgeCell = tr.children[5];
+  const pctBar = c.pct===null ? '' : `<div class="bar-track"><div class="bar-fill" style="width:${Math.min(Math.max(c.pct,0),100)}%;background:var(--${c.semaforo==='gray'?'gray-badge':c.semaforo})"></div></div>`;
+  const pctText = c.pct===null ? '—' : c.pct.toFixed(1).replace('.',',')+'%';
+  barCell.innerHTML = `${pctBar}<span class="pct-text">${pctText}</span>`;
+  badgeCell.innerHTML = `<span class="badge ${c.semaforo}">${c.label}</span>`;
+}
+
+/* ---------- Registro de Despachos W.O. (trazabilidad administrativa) ---------- */
+function renderDespachos(){
+  const tbody = document.getElementById('tbody-despachos');
+  tbody.innerHTML = '';
+  if(!state.despachosWO.length){
+    tbody.innerHTML = `<tr><td colspan="7" style="padding:10px;color:var(--gray);font-size:12.5px;">Sin despachos registrados esta semana.</td></tr>`;
+  } else {
+    state.despachosWO.forEach((d,i)=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="date" data-f="fecha" value="${d.fecha||''}"></td>
+        <td><input type="text" data-f="factura" value="${(d.factura||'').replace(/"/g,'&quot;')}"></td>
+        <td><input type="text" data-f="cliente" value="${(d.cliente||'').replace(/"/g,'&quot;')}"></td>
+        <td><input type="text" data-f="pozo" value="${(d.pozo||'').replace(/"/g,'&quot;')}"></td>
+        <td><input type="number" step="any" data-f="egreso" value="${d.egreso!==null&&d.egreso!==undefined?d.egreso:''}"></td>
+        <td><input type="text" data-f="obs" value="${(d.obs||'').replace(/"/g,'&quot;')}"></td>
+        <td><button class="row-del" title="Eliminar">✕</button></td>
+      `;
+      tr.querySelectorAll('[data-f]').forEach(el=>{
+        el.addEventListener('input', ()=>{
+          d[el.dataset.f] = el.dataset.f==='egreso' ? (el.value===''?null:Number(el.value)) : el.value;
+          renderDespachosTotales();
+          saveState();
+        });
+      });
+      tr.querySelector('.row-del').addEventListener('click', ()=>{
+        state.despachosWO.splice(i,1); renderDespachos(); saveState();
+      });
+      tbody.appendChild(tr);
+    });
+  }
+  renderDespachosTotales();
+}
+function renderDespachosTotales(){
+  const total = state.despachosWO.reduce((sum,d)=> sum + (Number(d.egreso)||0), 0);
+  document.getElementById('despachosTotal').textContent = total ? `${total.toLocaleString('es-EC',{maximumFractionDigits:1})} gal` : '—';
+  const kpiWO = state.combustibles.find(r=>r.kpi.indexOf('Galones Entregados W.O.')>=0);
+  const badge = document.getElementById('despachosRecon');
+  if(!kpiWO){ badge.className='badge gray'; badge.textContent='Sin KPI de referencia'; return; }
+  const declarado = Number(kpiWO.valor)||0;
+  const dif = Math.abs(total - declarado);
+  if(!state.despachosWO.length){ badge.className='badge gray'; badge.textContent='Sin despachos registrados'; return; }
+  if(dif < 0.5){ badge.className='badge green'; badge.textContent=`✔ Coincide (KPI: ${declarado})`; }
+  else { badge.className='badge red'; badge.textContent=`✗ Diferencia de ${dif.toFixed(1)} gal vs. KPI (${declarado})`; }
+}
+document.getElementById('btnAddDespacho').addEventListener('click', ()=>{
+  state.despachosWO.push({fecha:'', factura:'', cliente:'', pozo:'', egreso:null, obs:''});
+  renderDespachos(); saveState();
+});
+
+/* ---------- Control de Mermas y Desvío ---------- */
+function mermaErrCells(c){
+  const fmtErr = (e)=> e===null ? '—' : (e>0?'+':'')+e.toFixed(1)+'%';
+  return {errVarTxt: fmtErr(c.errVar), errTelTxt: fmtErr(c.errTel)};
+}
+function renderMermas(){
+  const tbody = document.getElementById('tbody-mermas');
+  tbody.innerHTML = '';
+  state.mermas.forEach((row)=>{
+    const c = calcMerma(row);
+    const {errVarTxt, errTelTxt} = mermaErrCells(c);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="kpi-name">${row.categoria}</td>
+      <td class="editable"><input type="number" step="1" data-f="despachos" value="${fmt(row.despachos)}"></td>
+      <td class="editable"><input type="number" step="any" data-f="contador" value="${fmt(row.contador)}" placeholder="s/d"></td>
+      <td class="editable"><input type="number" step="any" data-f="varillaje" value="${fmt(row.varillaje)}" placeholder="s/d"></td>
+      <td class="editable"><input type="number" step="any" data-f="telemetria" value="${fmt(row.telemetria)}" placeholder="s/d"></td>
+      <td class="pct-text" data-cell="errVar">${errVarTxt}</td>
+      <td class="pct-text" data-cell="errTel">${errTelTxt}</td>
+      <td data-cell="badge"><span class="badge ${c.semaforo}">${c.label}</span></td>
+      <td class="nota"><input type="text" data-f="obs" value="${(row.obs||c.accionSugerida||'').replace(/"/g,'&quot;')}" placeholder="Acción / observación..."></td>
+    `;
+    tr.querySelectorAll('[data-f]').forEach(el=>{
+      el.addEventListener('input', ()=>{
+        const f = el.dataset.f;
+        row[f] = (f==='obs') ? el.value : (el.value===''? null : Number(el.value));
+        if(f==='obs'){ saveState(); return; }
+        const c2 = calcMerma(row);
+        const {errVarTxt:v2, errTelTxt:t2} = mermaErrCells(c2);
+        tr.querySelector('[data-cell="errVar"]').textContent = v2;
+        tr.querySelector('[data-cell="errTel"]').textContent = t2;
+        tr.querySelector('[data-cell="badge"]').innerHTML = `<span class="badge ${c2.semaforo}">${c2.label}</span>`;
+        saveState();
+      });
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+
+
+function renderAcciones(){
+  const tbody = document.getElementById('tbody-acciones');
+  tbody.innerHTML = '';
+  if(!state.acciones.length){
+    tbody.innerHTML = `<tr><td colspan="6" style="padding:10px;color:var(--gray);font-size:12.5px;">Sin acciones registradas. Usa "Sugerir filas" o "Agregar fila".</td></tr>`;
+    if(document.getElementById('brief')) renderBrief();
+    return;
+  }
+  state.acciones.forEach((a, i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" data-f="hallazgo" value="${(a.hallazgo||'').replace(/"/g,'&quot;')}"></td>
+      <td><textarea data-f="accion">${a.accion||''}</textarea></td>
+      <td><input type="text" data-f="responsable" value="${(a.responsable||'').replace(/"/g,'&quot;')}"></td>
+      <td><input type="date" data-f="fecha" value="${a.fecha||''}"></td>
+      <td><select data-f="estado">
+        <option value="Abierta" ${a.estado==='Abierta'?'selected':''}>Abierta</option>
+        <option value="En proceso" ${a.estado==='En proceso'?'selected':''}>En proceso</option>
+        <option value="Cerrada" ${a.estado==='Cerrada'?'selected':''}>Cerrada</option>
+      </select>
+      <div style="margin-top:4px;"><span class="badge ${statusColor(a.estado)}">${statusLabel(a.estado)}</span></div></td>
+      <td><button class="row-del" title="Eliminar fila">✕</button></td>
+    `;
+    tr.querySelectorAll('[data-f]').forEach(el=>{
+      const evt = (el.tagName==='SELECT') ? 'change' : 'input';
+      el.addEventListener(evt, ()=>{
+        a[el.dataset.f] = el.value;
+        if(el.dataset.f==='estado'){ renderAcciones(); }
+        saveState();
+      });
+    });
+    tr.querySelector('.row-del').addEventListener('click', ()=>{
+      state.acciones.splice(i,1); renderAcciones(); saveState();
+    });
+    tbody.appendChild(tr);
+  });
+  if(document.getElementById('brief')) renderBrief();
+}
+
+function renderMejoras(){
+  const list = document.getElementById('mejoras-list');
+  list.innerHTML = '';
+  if(!state.mejoras.length){
+    list.innerHTML = `<p class="helper-note" style="margin:8px 0 0;">Sin puntos de mejora continua registrados.</p>`;
+    return;
+  }
+  state.mejoras.forEach((m,i)=>{
+    const div = document.createElement('div');
+    div.className = 'mejora-item';
+    div.innerHTML = `
+      <input type="text" data-f="texto" value="${(m.texto||'').replace(/"/g,'&quot;')}" placeholder="Punto de mejora continua...">
+      <select data-f="estado">
+        <option value="Abierta" ${m.estado==='Abierta'?'selected':''}>Abierta</option>
+        <option value="En proceso" ${m.estado==='En proceso'?'selected':''}>En proceso</option>
+        <option value="Cerrada" ${m.estado==='Cerrada'?'selected':''}>Cerrada</option>
+      </select>
+      <span class="badge ${statusColor(m.estado)}">${statusLabel(m.estado)}</span>
+      <button class="row-del" title="Eliminar">✕</button>`;
+    div.querySelectorAll('[data-f]').forEach(el=>{
+      const evt = el.tagName==='SELECT' ? 'change' : 'input';
+      el.addEventListener(evt, ()=>{
+        m[el.dataset.f] = el.value;
+        if(el.dataset.f==='estado'){ renderMejoras(); }
+        saveState();
+      });
+    });
+    div.querySelector('.row-del').addEventListener('click', ()=>{ state.mejoras.splice(i,1); renderMejoras(); saveState(); });
+    list.appendChild(div);
+  });
+}
+
+document.getElementById('btnAddAccion').addEventListener('click', ()=>{
+  state.acciones.push({hallazgo:'', accion:'', responsable:'', fecha:'', estado:'Abierta'});
+  renderAcciones(); saveState();
+});
+document.getElementById('btnAddMejora').addEventListener('click', ()=>{
+  state.mejoras.push({texto:'', estado:'Abierta'}); renderMejoras(); saveState();
+});
+document.getElementById('btnSugerirAcciones').addEventListener('click', ()=>{
+  const existentes = new Set(state.acciones.map(a=>a.hallazgo));
+  SECTIONS.forEach(sec=>{
+    state[sec].forEach(row=>{
+      const c = calc(row);
+      if((c.semaforo==='red' || c.semaforo==='yellow') && !existentes.has(row.kpi)){
+        state.acciones.push({hallazgo:row.kpi, accion:'', responsable:'', fecha:'', estado:'Abierta'});
+        existentes.add(row.kpi);
+      }
+    });
+  });
+  renderAcciones(); saveState();
+});
+
+document.getElementById('rv-estado').addEventListener('change', e=>{ state.revision.estado=e.target.value; renderHeaderFields(); saveState(); });
+document.getElementById('rv-fecha').addEventListener('input', e=>{ state.revision.fecha=e.target.value; renderHeaderFields(); saveState(); });
+document.getElementById('rv-aprobadopor').addEventListener('input', e=>{ state.revision.aprobadoPor=e.target.value; renderHeaderFields(); saveState(); });
+document.getElementById('rv-observaciones').addEventListener('input', e=>{ state.observacionesGerencia=e.target.value; saveState(); });
+
+function renderActividades(){
+  document.getElementById('act-combustibles').value = state.activities.combustibles || '';
+  document.getElementById('act-qhse').value = state.activities.qhse || '';
+  document.getElementById('act-operaciones').value = state.activities.operaciones || '';
+}
+function renderSGI(){
+  const c = calcSGI(state.sgiRevision.avance);
+  document.getElementById('sgi-avance').value = state.sgiRevision.avance;
+  document.getElementById('sgi-nota').value = state.sgiRevision.nota || '';
+  document.getElementById('sgi-bar-fill').style.width = Math.min(Math.max(Number(state.sgiRevision.avance)||0,0),100)+'%';
+  document.getElementById('sgi-bar-fill').style.background = `var(--${c.semaforo==='gray'?'gray-badge':c.semaforo})`;
+  const badge = document.getElementById('sgi-badge');
+  badge.className = 'badge '+c.semaforo;
+  badge.textContent = (Number(state.sgiRevision.avance)||0)+'% — '+c.label;
+}
+document.getElementById('act-combustibles').addEventListener('input', e=>{ state.activities.combustibles = e.target.value; saveState(); });
+document.getElementById('act-qhse').addEventListener('input', e=>{ state.activities.qhse = e.target.value; saveState(); });
+document.getElementById('act-operaciones').addEventListener('input', e=>{ state.activities.operaciones = e.target.value; saveState(); });
+document.getElementById('sgi-avance').addEventListener('input', e=>{ state.sgiRevision.avance = e.target.value===''?0:Number(e.target.value); renderSGI(); saveState(); });
+document.getElementById('sgi-nota').addEventListener('input', e=>{ state.sgiRevision.nota = e.target.value; saveState(); });
+
+function renderAll(){
+  renderHeaderFields();
+  renderSummary();
+  renderComparativo();
+  renderBrief();
+  SECTIONS.forEach(renderSection);
+  renderDespachos();
+  renderMermas();
+  renderAcciones();
+  renderMejoras();
+  renderActividades();
+  renderSGI();
+}
+
+document.getElementById('f-semana').addEventListener('input', e=>{state.semana=e.target.value; renderComparativo(); saveState();});
+document.getElementById('f-periodo').addEventListener('input', e=>{state.periodo=e.target.value; saveState();});
+document.getElementById('f-revisado').addEventListener('input', e=>{state.revisado=e.target.value; saveState();});
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('sec-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+document.getElementById('btnExport').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `F1-6.1-COM_respaldo_semana-${state.semana}.json`; a.click();
+  URL.revokeObjectURL(url);
+});
+document.getElementById('btnImport').addEventListener('click', ()=> document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const imported = JSON.parse(ev.target.result);
+      imported.revision = imported.revision || JSON.parse(JSON.stringify(DEFAULT_STATE.revision));
+      imported.acciones = imported.acciones || [];
+      imported.mejoras = imported.mejoras || [];
+      imported.observacionesGerencia = imported.observacionesGerencia || "";
+      imported.historial = imported.historial || [];
+      imported.mermas = imported.mermas || JSON.parse(JSON.stringify(DEFAULT_STATE.mermas));
+      imported.despachosWO = imported.despachosWO || [];
+      state = imported;
+      renderAll(); saveState();
+    }catch(err){ alert('El archivo no tiene un formato válido de respaldo.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+async function newWeek(){
+  if(!confirm('Esto archiva el resumen de esta semana para la comparación y el brief de auditoría, traslada a la nueva semana las acciones y mejoras que NO estén "Cerrada", limpia los valores de los KPI y avanza el número de semana. ¿Continuar?')) return;
+  const counts = getCounts();
+  state.historial.push({
+    semana: state.semana,
+    periodo: state.periodo,
+    fechaArchivo: new Date().toISOString().slice(0,10),
+    counts,
+    acciones: JSON.parse(JSON.stringify(state.acciones)),
+    mejoras: JSON.parse(JSON.stringify(state.mejoras)),
+    kpis: {
+      combustibles: JSON.parse(JSON.stringify(state.combustibles)),
+      qhse: JSON.parse(JSON.stringify(state.qhse)),
+      operaciones: JSON.parse(JSON.stringify(state.operaciones))
+    },
+    sgiRevision: JSON.parse(JSON.stringify(state.sgiRevision)),
+    revision: JSON.parse(JSON.stringify(state.revision)),
+    mermas: JSON.parse(JSON.stringify(state.mermas)),
+    despachosWO: JSON.parse(JSON.stringify(state.despachosWO))
+  });
+  if(state.historial.length > 26) state.historial.shift();
+
+  SECTIONS.forEach(sec=>{ state[sec].forEach(row=>{ row.valor = 0; row.nota=''; }); });
+  state.acciones = state.acciones.filter(a=>a.estado !== 'Cerrada');
+  state.mejoras = state.mejoras.filter(m=>m.estado !== 'Cerrada');
+  state.activities = { combustibles:'', qhse:'', operaciones:'' };
+  state.sgiRevision.nota = '';
+  state.despachosWO = [];
+  state.mermas.forEach(m=>{ m.despachos=0; m.contador=null; m.varillaje=null; m.telemetria=null; m.obs=''; });
+
+  const n = parseInt(state.semana,10);
+  if(!isNaN(n)) state.semana = String(n+1);
+  state.revision = {estado:'Pendiente', fecha:'', aprobadoPor: state.revision.aprobadoPor || 'Gerente de Combustibles'};
+
+  renderAll();
+  saveState();
+}
+document.getElementById('btnReset').addEventListener('click', newWeek);
+
+/* ================= PDF REPORT ================= */
+let pdfDonut=null, pdfBar=null;
+
+function pxPage(){
+  const div = document.createElement('div');
+  div.style.cssText = 'width:794px;min-height:1123px;background:#fff;padding:44px 48px;font-family:"Source Serif 4",Georgia,serif;color:#2B2426;box-sizing:border-box;';
+  return div;
+}
+function pdfHeaderHTML(subtitle){
+  return `
+    <div style="border-bottom:3px solid #A93B3C;padding-bottom:10px;margin-bottom:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;">
+        <div style="font-size:22px;font-weight:700;color:#A93B3C;">TECKNOLOGISTIC S.A.</div>
+        <div style="font-size:11px;color:#6B6467;">ISO 9001:2015 · F1-6.1-COM · Confidencial</div>
+      </div>
+      <div style="font-size:14px;margin-top:4px;">${subtitle}</div>
+      <div style="font-size:11.5px;color:#6B6467;margin-top:3px;">Semana N.º ${state.semana} · Período ${state.periodo}</div>
+    </div>`;
+}
+function pdfFooterHTML(pageLabel){
+  return `<div style="position:absolute;bottom:34px;left:48px;right:48px;font-size:9.5px;color:#8a8385;border-top:1px solid #E4DEDD;padding-top:6px;display:flex;justify-content:space-between;">
+    <span>Código: TCK-ADM-1.2 · F1-6.1-COM · v01 · Elaborado: K. Mena · Revisado: J. Montalvo · Aprobado: M. Paliz</span><span>${pageLabel}</span>
+  </div>`;
+}
+function badgeHtml(label, semaforo){
+  const colors = {green:['#2E7D46','#E8F3EA'], yellow:['#B8860B','#FBF1DD'], red:['#A93B3C','#F6E9E9'], gray:['#7A7477','#EFECEB']};
+  const [fg,bg] = colors[semaforo];
+  return `<span style="background:${bg};color:${fg};font-size:10.5px;font-weight:600;padding:3px 7px;border-radius:3px;white-space:nowrap;">${label}</span>`;
+}
+function comparativoPdfHtml(){
+  if(!state.historial.length) return '';
+  const last = state.historial[state.historial.length-1];
+  const cur = getCounts();
+  const d = (a,b)=>{ const x=Math.round((a-b)*10)/10; return x>0?`+${x}`:`${x}`; };
+  return `<div style="margin:6px 0 18px;">
+    <div style="font-size:12.5px;font-weight:600;margin-bottom:6px;">Comparativo vs. Semana ${last.semana}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:10.5px;">
+      <thead><tr style="border-bottom:1px solid #2B2426;">
+        <th style="text-align:left;padding:4px;">Categoría</th><th style="text-align:right;padding:4px;">Sem. ${last.semana}</th><th style="text-align:right;padding:4px;">Sem. ${state.semana}</th><th style="text-align:right;padding:4px;">Variación</th>
+      </tr></thead>
+      <tbody>
+        <tr><td style="padding:4px;">🟢 Conformes</td><td style="padding:4px;text-align:right;">${last.counts.green}</td><td style="padding:4px;text-align:right;">${cur.green}</td><td style="padding:4px;text-align:right;">${d(cur.green,last.counts.green)}</td></tr>
+        <tr><td style="padding:4px;">🟡 En riesgo</td><td style="padding:4px;text-align:right;">${last.counts.yellow}</td><td style="padding:4px;text-align:right;">${cur.yellow}</td><td style="padding:4px;text-align:right;">${d(cur.yellow,last.counts.yellow)}</td></tr>
+        <tr><td style="padding:4px;">🔴 No conformes</td><td style="padding:4px;text-align:right;">${last.counts.red}</td><td style="padding:4px;text-align:right;">${cur.red}</td><td style="padding:4px;text-align:right;">${d(cur.red,last.counts.red)}</td></tr>
+        <tr><td style="padding:4px;">Cumplimiento promedio</td><td style="padding:4px;text-align:right;">${last.counts.avgPct!==null?last.counts.avgPct.toFixed(1)+'%':'—'}</td><td style="padding:4px;text-align:right;">${cur.avgPct!==null?cur.avgPct.toFixed(1)+'%':'—'}</td><td style="padding:4px;text-align:right;">${(last.counts.avgPct!==null&&cur.avgPct!==null)?d(cur.avgPct,last.counts.avgPct)+' pts':'—'}</td></tr>
+      </tbody>
+    </table>
+  </div>`;
+}
+
+async function buildPage1(){
+  const page = pxPage();
+  page.style.position='relative';
+  const {green,yellow,red,gray,total} = getCounts();
+  page.innerHTML = pdfHeaderHTML('Informe Ejecutivo Semanal — Área de Combustibles (para Gerencia General)') + `
+    <div style="font-size:16px;font-weight:600;margin:6px 0 14px;">Resumen Ejecutivo</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px;">
+      <div style="border:1px solid #E4DEDD;border-top:3px solid #2B2426;padding:10px;"><div style="font-size:22px;font-weight:700;">${total}</div><div style="font-size:10px;color:#6B6467;">Indicadores</div></div>
+      <div style="border:1px solid #E4DEDD;border-top:3px solid #2E7D46;padding:10px;"><div style="font-size:22px;font-weight:700;color:#2E7D46;">${green}</div><div style="font-size:10px;color:#6B6467;">🟢 Conformes</div></div>
+      <div style="border:1px solid #E4DEDD;border-top:3px solid #B8860B;padding:10px;"><div style="font-size:22px;font-weight:700;color:#B8860B;">${yellow}</div><div style="font-size:10px;color:#6B6467;">🟡 En riesgo</div></div>
+      <div style="border:1px solid #E4DEDD;border-top:3px solid #A93B3C;padding:10px;"><div style="font-size:22px;font-weight:700;color:#A93B3C;">${red}</div><div style="font-size:10px;color:#6B6467;">🔴 No conformes</div></div>
+      <div style="border:1px solid #E4DEDD;border-top:3px solid #7A7477;padding:10px;"><div style="font-size:22px;font-weight:700;color:#7A7477;">${gray}</div><div style="font-size:10px;color:#6B6467;">⚪ Sin meta</div></div>
+    </div>
+    ${comparativoPdfHtml()}
+    <div style="display:flex;gap:24px;align-items:flex-start;">
+      <div style="flex:0 0 230px;">
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:8px;">Distribución de semáforos</div>
+        <canvas id="pdfDonut" width="230" height="230"></canvas>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:8px;">% de cumplimiento por indicador</div>
+        <canvas id="pdfBar" width="440" height="320"></canvas>
+      </div>
+    </div>
+  ` + pdfFooterHTML('Página 1 de 3');
+  document.body.appendChild(page);
+
+  const donutCtx = page.querySelector('#pdfDonut').getContext('2d');
+  pdfDonut = new Chart(donutCtx, {
+    type:'doughnut',
+    data:{ labels:['Conforme','En riesgo','No conforme','Sin meta'], datasets:[{data:[green,yellow,red,gray], backgroundColor:['#2E7D46','#B8860B','#A93B3C','#7A7477']}] },
+    options:{ animation:false, plugins:{legend:{position:'bottom', labels:{font:{size:10}}}} }
+  });
+
+  const barLabels=[], barData=[], barColors=[];
+  SECTIONS.forEach(sec=>{
+    state[sec].forEach(row=>{
+      const c = calc(row);
+      if(c.pct!==null){
+        barLabels.push(row.kpi.length>28?row.kpi.slice(0,26)+'…':row.kpi);
+        barData.push(Math.round(c.pct*10)/10);
+        const colors={green:'#2E7D46',yellow:'#B8860B',red:'#A93B3C',gray:'#7A7477'};
+        barColors.push(colors[c.semaforo]);
+      }
+    });
+  });
+  const barCtx = page.querySelector('#pdfBar').getContext('2d');
+  pdfBar = new Chart(barCtx, {
+    type:'bar',
+    data:{ labels:barLabels, datasets:[{data:barData, backgroundColor:barColors}] },
+    options:{ indexAxis:'y', animation:false, plugins:{legend:{display:false}}, scales:{x:{title:{display:true,text:'% cumplimiento',font:{size:9}}, ticks:{font:{size:8}}}, y:{ticks:{font:{size:8}}}} }
+  });
+
+  await new Promise(r=>setTimeout(r, 250));
+  return page;
+}
+
+function kpiRowsHtml(sec){
+  return state[sec].map(row=>{
+    const c = calc(row);
+    return `<tr>
+      <td style="padding:5px 6px;font-weight:600;">${row.kpi}<div style="font-size:9px;color:#6B6467;font-weight:400;">${row.clause}</div></td>
+      <td style="padding:5px 6px;text-align:right;">${fmt(row.valor)}</td>
+      <td style="padding:5px 6px;text-align:right;">${row.tipo==='none'?'—':fmt(row.meta)}</td>
+      <td style="padding:5px 6px;text-align:right;">${c.pct===null?'—':c.pct.toFixed(1).replace('.',',')+'%'}</td>
+      <td style="padding:5px 6px;">${badgeHtml(c.label, c.semaforo)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function buildPage2(){
+  const page = pxPage();
+  page.style.position='relative';
+  let tables = '';
+  SECTIONS.forEach(sec=>{
+    tables += `<div style="font-size:13.5px;font-weight:600;margin:16px 0 4px;">${SECTION_LABELS[sec]}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <thead><tr style="border-bottom:2px solid #2B2426;">
+          <th style="text-align:left;padding:5px 6px;font-size:9.5px;color:#6B6467;">KPI</th>
+          <th style="text-align:right;padding:5px 6px;font-size:9.5px;color:#6B6467;">Valor</th>
+          <th style="text-align:right;padding:5px 6px;font-size:9.5px;color:#6B6467;">Meta</th>
+          <th style="text-align:right;padding:5px 6px;font-size:9.5px;color:#6B6467;">% Cumpl.</th>
+          <th style="text-align:left;padding:5px 6px;font-size:9.5px;color:#6B6467;">Semáforo</th>
+        </tr></thead>
+        <tbody>${kpiRowsHtml(sec)}</tbody>
+      </table>`;
+    tables += `<div style="font-size:10px;margin:6px 0 4px;"><b>Actividades realizadas:</b> ${state.activities[sec] ? state.activities[sec].replace(/\n/g,'<br>') : '—'}</div>`;
+    if(sec==='qhse'){
+      const cSgi = calcSGI(state.sgiRevision.avance);
+      tables += `<div style="font-size:10px;margin:8px 0 2px;"><b>Revisión de SGI e ISO 9001:</b> ${Number(state.sgiRevision.avance)||0}% de avance — ${badgeHtml(cSgi.label, cSgi.semaforo)}</div>`;
+      if(state.sgiRevision.nota) tables += `<div style="font-size:9.5px;color:#6B6467;margin-bottom:4px;">${state.sgiRevision.nota.replace(/\n/g,'<br>')}</div>`;
+    }
+  });
+  tables += `<div style="font-size:13.5px;font-weight:600;margin:18px 0 4px;">Control de Mermas y Desvío de Combustible</div>
+    <table style="width:100%;border-collapse:collapse;font-size:10px;">
+      <thead><tr style="border-bottom:2px solid #2B2426;">
+        <th style="text-align:left;padding:4px 5px;font-size:9px;color:#6B6467;">Categoría</th>
+        <th style="text-align:right;padding:4px 5px;font-size:9px;color:#6B6467;">Despachos</th>
+        <th style="text-align:right;padding:4px 5px;font-size:9px;color:#6B6467;">Contador</th>
+        <th style="text-align:right;padding:4px 5px;font-size:9px;color:#6B6467;">Varillaje</th>
+        <th style="text-align:right;padding:4px 5px;font-size:9px;color:#6B6467;">Telemetría</th>
+        <th style="text-align:right;padding:4px 5px;font-size:9px;color:#6B6467;">%ERR C/V</th>
+        <th style="text-align:right;padding:4px 5px;font-size:9px;color:#6B6467;">%ERR C/T</th>
+        <th style="text-align:left;padding:4px 5px;font-size:9px;color:#6B6467;">Semáforo</th>
+      </tr></thead>
+      <tbody>${state.mermas.map(row=>{
+        const c = calcMerma(row);
+        const fmtErr = (e)=> e===null?'—':(e>0?'+':'')+e.toFixed(1)+'%';
+        return `<tr>
+          <td style="padding:4px 5px;font-weight:600;">${row.categoria}</td>
+          <td style="padding:4px 5px;text-align:right;">${fmt(row.despachos)}</td>
+          <td style="padding:4px 5px;text-align:right;">${row.contador===null?'s/d':row.contador}</td>
+          <td style="padding:4px 5px;text-align:right;">${row.varillaje===null?'s/d':row.varillaje}</td>
+          <td style="padding:4px 5px;text-align:right;">${row.telemetria===null?'s/d':row.telemetria}</td>
+          <td style="padding:4px 5px;text-align:right;">${fmtErr(c.errVar)}</td>
+          <td style="padding:4px 5px;text-align:right;">${fmtErr(c.errTel)}</td>
+          <td style="padding:4px 5px;">${badgeHtml(c.label, c.semaforo)}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>
+    <div style="font-size:9.5px;margin-top:6px;">${state.despachosWO.length} despacho(s) W.O. registrados · Total: ${state.despachosWO.reduce((s,d)=>s+(Number(d.egreso)||0),0).toLocaleString('es-EC',{maximumFractionDigits:1})} gal</div>`;
+  page.innerHTML = pdfHeaderHTML('Detalle de Indicadores por Colaborador') + tables + pdfFooterHTML('Página 2 de 3');
+  document.body.appendChild(page);
+  return page;
+}
+
+function buildPage3(){
+  const page = pxPage();
+  page.style.position='relative';
+  const accionesRows = state.acciones.length ? state.acciones.map(a=>`
+    <tr>
+      <td style="padding:6px;font-size:10.5px;font-weight:600;">${a.hallazgo||'—'}</td>
+      <td style="padding:6px;font-size:10.5px;">${a.accion||'—'}</td>
+      <td style="padding:6px;font-size:10.5px;">${a.responsable||'—'}</td>
+      <td style="padding:6px;font-size:10.5px;">${a.fecha||'—'}</td>
+      <td style="padding:6px;font-size:10.5px;">${badgeHtml(statusLabel(a.estado), statusColor(a.estado))}</td>
+    </tr>`).join('') : `<tr><td colspan="5" style="padding:8px;font-size:11px;color:#6B6467;">Sin acciones correctivas registradas para esta semana.</td></tr>`;
+
+  const mejorasList = state.mejoras.length ? state.mejoras.map(m=>`<li style="margin-bottom:6px;">${m.texto||'—'} ${badgeHtml(statusLabel(m.estado), statusColor(m.estado))}</li>`).join('') : `<li style="color:#6B6467;">Sin puntos de mejora continua registrados.</li>`;
+
+  const obs = state.observacionesGerencia ? state.observacionesGerencia.replace(/\n/g,'<br>') : 'Sin observaciones adicionales.';
+
+  page.innerHTML = pdfHeaderHTML('Acciones Correctivas, Mejora Continua y Aprobación') + `
+    <div style="font-size:13.5px;font-weight:600;margin:10px 0 4px;">Acciones Correctivas y Seguimiento (§10.2)</div>
+    <table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:18px;">
+      <thead><tr style="border-bottom:2px solid #2B2426;">
+        <th style="text-align:left;padding:6px;font-size:9.5px;color:#6B6467;">Hallazgo</th>
+        <th style="text-align:left;padding:6px;font-size:9.5px;color:#6B6467;">Acción</th>
+        <th style="text-align:left;padding:6px;font-size:9.5px;color:#6B6467;">Responsable</th>
+        <th style="text-align:left;padding:6px;font-size:9.5px;color:#6B6467;">Fecha compr.</th>
+        <th style="text-align:left;padding:6px;font-size:9.5px;color:#6B6467;">Estado</th>
+      </tr></thead>
+      <tbody>${accionesRows}</tbody>
+    </table>
+
+    <div style="font-size:13.5px;font-weight:600;margin:10px 0 4px;">Mejora Continua (§10.3)</div>
+    <ul style="font-size:11px;padding-left:18px;margin:0 0 18px;">${mejorasList}</ul>
+
+    <div style="font-size:13.5px;font-weight:600;margin:10px 0 4px;">Observaciones de la Gerencia de Combustibles</div>
+    <div style="font-size:11.5px;border:1px solid #E4DEDD;padding:10px;min-height:60px;margin-bottom:20px;">${obs}</div>
+
+    <div style="font-size:13.5px;font-weight:600;margin:10px 0 8px;">Aprobación</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:11px;">
+      <div><b style="display:block;font-size:9.5px;color:#6B6467;">Estado</b>${state.revision.estado==='Aprobado' ? '✔ Aprobado en reunión semanal' : 'Pendiente de aprobación'}</div>
+      <div><b style="display:block;font-size:9.5px;color:#6B6467;">Fecha</b>${state.revision.fecha||'—'}</div>
+      <div><b style="display:block;font-size:9.5px;color:#6B6467;">Aprobado por</b>${state.revision.aprobadoPor||'—'}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:34px;font-size:10.5px;text-align:center;">
+      <div><div style="border-top:1px solid #2B2426;padding-top:5px;">Revisado — Gerente Combustibles</div></div>
+      <div><div style="border-top:1px solid #2B2426;padding-top:5px;">Aprobado — Gerencia General</div></div>
+    </div>
+  ` + pdfFooterHTML('Página 3 de 3');
+  document.body.appendChild(page);
+  return page;
+}
+
+async function generatePDF(){
+  const btn = document.getElementById('btnPdf');
+  const statusEl = document.getElementById('saveStatus');
+  btn.disabled = true;
+  statusEl.textContent = 'Generando informe PDF...';
+
+  const stage = document.createElement('div');
+  stage.style.cssText = 'position:fixed;left:-99999px;top:0;';
+  document.body.appendChild(stage);
+
+  try{
+    const page1 = await buildPage1();
+    stage.appendChild(page1);
+    const page2 = buildPage2();
+    stage.appendChild(page2);
+    const page3 = buildPage3();
+    stage.appendChild(page3);
+
+    await new Promise(r=>setTimeout(r, 200));
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','mm','a4');
+    const pages = [page1, page2, page3];
+    const imgW = 210, pageHmm = 297;
+    let firstPageAdded = false;
+    for(let i=0; i<pages.length; i++){
+      const canvas = await html2canvas(pages[i], {scale:2, backgroundColor:'#ffffff'});
+      const pxPerMm = canvas.width / imgW;
+      const pageHeightPx = Math.floor(pageHmm * pxPerMm);
+      let renderedPx = 0;
+      while(renderedPx < canvas.height){
+        const sliceHeightPx = Math.min(pageHeightPx, canvas.height - renderedPx);
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = sliceHeightPx;
+        sliceCanvas.getContext('2d').drawImage(canvas, 0, renderedPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
+        const sliceData = sliceCanvas.toDataURL('image/png');
+        const sliceHeightMm = sliceHeightPx / pxPerMm;
+        if(firstPageAdded) doc.addPage();
+        doc.addImage(sliceData, 'PNG', 0, 0, imgW, sliceHeightMm);
+        firstPageAdded = true;
+        renderedPx += sliceHeightPx;
+      }
+    }
+    doc.save(`F1-6.1-COM_Informe_Gerencia_Semana-${state.semana}.pdf`);
+    statusEl.textContent = 'Informe PDF generado ✓';
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = 'No se pudo generar el PDF. Intenta nuevamente.';
+  }finally{
+    if(pdfDonut){ pdfDonut.destroy(); pdfDonut=null; }
+    if(pdfBar){ pdfBar.destroy(); pdfBar=null; }
+    document.body.removeChild(stage);
+    btn.disabled = false;
+    setTimeout(()=>{ if(statusEl.textContent.includes('✓')) statusEl.textContent=''; }, 2500);
+  }
+}
+document.getElementById('btnPdf').addEventListener('click', generatePDF);
+
+(async function init(){
+  state = await loadState();
+  renderAll();
+})();
+</script>
+</body>
+</html>
